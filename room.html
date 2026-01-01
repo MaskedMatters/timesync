@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Room</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <div class="room-layout">
+        <div class="main">
+
+            <div id="top-bar">
+                <div id="local-time"></div>
+                <div id="majority-time"></div>
+                <div id="gmt-time"></div>
+            </div>
+
+            <div id="room-code"
+                style="padding: 10px 20px; font-size: 1rem; background: rgba(2,6,23,0.8); border-bottom: 1px solid #1e293b; text-align: center;">
+                Room Code: <span id="room-code-value"></span>
+            </div>
+
+            <div id="stopwatch">00:00:00.000</div>
+        </div>
+
+        <aside id="side-panel">
+            <h2>Members</h2>
+            <ul id="member-list"></ul>
+
+            <button id="leaveRoom" class="danger">Leave Room</button>
+        </aside>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "timesync",
+  "version": "1.0.0",
+  "description": "The backend for a minimal web application that allows many clients to sync to a relative time.",
+  "homepage": "https://github.com/MaskedMatters/timesync#readme",
+  "bugs": {
+    "url": "https://github.com/MaskedMatters/timesync/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaskedMatters/timesync.git"
+  },
+  "license": "MIT",
+  "author": "MaskedMatters",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
