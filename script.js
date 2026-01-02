@@ -37,7 +37,7 @@ async function createRoom() {
     if (!name) return alert("Please enter your name.");
 
     try {
-        const res = await fetch("http://localhost:8080/rooms", {
+        const res = await fetch("/rooms", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ roomCode: userCode || undefined })
@@ -94,7 +94,7 @@ async function initRoomPage() {
     // This implies ephemeral membership. Refreshing page = Re-joining.
 
     try {
-        const res = await fetch(`http://localhost:8080/rooms/${code}/join`, {
+        const res = await fetch(`/rooms/${code}/join`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             // We won't send an existing memberId, effectively treating every load as unique or new.
@@ -141,7 +141,7 @@ function setupRoomUI(code, currentMember, initialRoomState) {
     }
 
     // SSE Connection
-    const sseUrl = `http://localhost:8080/events?code=${code}&memberId=${currentMember.id}`;
+    const sseUrl = `/events?code=${code}&memberId=${currentMember.id}`;
     console.log("Connecting SSE:", sseUrl);
     const evtSource = new EventSource(sseUrl);
 
@@ -271,7 +271,7 @@ function setupRoomUI(code, currentMember, initialRoomState) {
 async function leaveRoom(code, memberId) {
     try {
         // Beacon is better for unload, but fetch works for explicit clicks
-        await fetch(`http://localhost:8080/rooms/${code}/leave`, {
+        await fetch(`/rooms/${code}/leave`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ memberId })

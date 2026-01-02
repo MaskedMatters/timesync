@@ -21,15 +21,17 @@ A real-time, high-precision collaborative timing application. Create or join a s
   - Vanilla JavaScript
   - Server-Sent Events (SSE) for real-time updates
 - **Backend**:
-  - Node.js (Standard `http` module)
-  - No external dependencies (Zero NPM installs required for the app itself)
+  - Node.js environment
+  - **Express.js** framework
+  - Serves both API and Static Files
 
 ## Directory Structure
 
 ```text
 ├── backend/
-│   ├── server.js      # Node.js HTTP & SSE Server
-│   └── package.json   # Project configuration
+│   ├── server.js      # Express Server (API + Static Serving)
+│   ├── package.json   # Project configuration
+│   └── package-lock.json
 ├── index.html         # Landing page (Create/Join)
 ├── room.html          # Dynamic room view
 ├── script.js          # Core frontend logic
@@ -41,29 +43,22 @@ A real-time, high-precision collaborative timing application. Create or join a s
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) installed on your machine.
-- A local server to host the frontend (or just open `index.html` in a browser, though some browsers block CORS on `file://` protocols).
 
-### 1. Launch the Backend
+### 1. Launch the Server
 
-Navigate to the `backend` directory and start the server:
+Navigate to the `backend` directory, install dependencies, and start the server:
 
 ```powershell
 cd backend
-npm run start
+npm install
+npm start
 ```
 
-The server will be running at `http://localhost:8080`.
+### 2. Access the App
 
-### 2. Launch the Frontend
+Open your browser to `http://localhost:3000`.
 
-You can use any light HTTP server. For example, using Python:
-
-```powershell
-# In the root project directory
-python -m http.server 8000
-```
-
-Open your browser to `http://localhost:8000`.
+The backend (Express) serves the frontend static files automatically, so there is no need to run a separate frontend server.
 
 ## How it Works
 
