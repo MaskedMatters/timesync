@@ -62,6 +62,16 @@ Open your browser to `http://localhost:3000`.
 
 The backend (Express) serves the frontend static files automatically, so there is no need to run a separate frontend server.
 
+### 3. Docker Deployment (Alternative)
+
+You can run the application instantly using the pre-built Docker image:
+
+```bash
+docker run -p 3000:3000 maskedmatters/timesync:v1.2.1-p
+```
+
+The app will be available at `http://localhost:3000`.
+
 ## How it Works
 
 ### Real-Time Sync
