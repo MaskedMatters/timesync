@@ -2,11 +2,13 @@
 
 A real-time, high-precision collaborative timing application. Create or join a shared room to track time together across different timezones.
 
-**Version:** 1.0.0
+**Version:** 1.2.1-p
 
 ## Features
 
 - **Shared Stopwatch**: A synchronized timer that starts the moment a room is created.
+- **Timer Controls**: Reset the timer instantly or **schedule a future start time** with timezone precision.
+- **Smart Continuity**: A sub-stopwatch automatically tracks elapsed time since the *previous* reset during countdowns, ensuring no data is lost.
 - **High Precision**: UI updates at ~60fps using `requestAnimationFrame` for a smooth, lag-free experience.
 - **Collaborative Member List**: Track who is in the room and how long they've been active.
 - **Timezone Intelligence**: Shows Local time, GMT, and calculates the **Majority Timezone** of all members in the room.
@@ -67,6 +69,7 @@ The app uses **Server-Sent Events (SSE)**. When a client joins a room, it establ
 - A new member joins.
 - A member leaves.
 - A member disconnects (detected via the `close` event on the SSE stream).
+- The timer is manually reset or scheduled (broadcasts `timer-update`).
 
 ### High Precision Rendering
 Unlike standard timers that use `setInterval(..., 1000)`, Time Room uses `requestAnimationFrame`. This allows the stopwatch to render milliseconds smoothly and ensures the clocks are always accurate to the system time without "drifting."

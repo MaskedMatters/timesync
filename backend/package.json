@@ -1,6 +1,6 @@
 {
   "name": "timesync",
-  "version": "1.0.0",
+  "version": "1.2.1-p",
   "description": "The backend for a minimal web application that allows many clients to sync to a relative time.",
   "homepage": "https://github.com/MaskedMatters/timesync#readme",
   "bugs": {
