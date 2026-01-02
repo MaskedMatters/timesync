@@ -40,8 +40,8 @@ function generateRoomCode() {
 
 app.use(express.json());
 
-// Serve static files from the parent directory (frontend)
-app.use(express.static(path.join(__dirname, "..")));
+// Serve static files from the 'static' directory (frontend)
+app.use(express.static(path.join(__dirname, "static")));
 
 /* ---------- SSE Endpoint ---------- */
 
