@@ -66,6 +66,8 @@ app.get("/events", (req, res) => {
 
     sendSSE(res, "init", {
         createdAt: room.createdAt,
+        startTime: room.startTime,
+        previousStartTime: room.previousStartTime,
         code: room.code,
         members: [...room.members.values()]
     });
@@ -109,6 +111,8 @@ app.post("/rooms", (req, res) => {
     rooms.set(roomCode, {
         code: roomCode,
         createdAt: Date.now(),
+        startTime: Date.now(), // Default start time is creation time
+        previousStartTime: Date.now(), // Track previous reset for sub-timer
         members: new Map(),
         streams: new Set()
     });
@@ -153,9 +157,41 @@ app.post("/rooms/:code/join", (req, res) => {
         roomState: {
             code: room.code,
             createdAt: room.createdAt,
+            startTime: room.startTime,
+            previousStartTime: room.previousStartTime,
             members: [...room.members.values()]
         }
     });
+});
+
+// Reset Timer
+app.post("/rooms/:code/reset", (req, res) => {
+    const { code } = req.params;
+    const room = rooms.get(code);
+    const { startTime } = req.body;
+
+    if (!room) return res.status(404).end();
+
+    const now = Date.now();
+    const currentStart = Number(room.startTime);
+
+    // Only update previousStartTime if the CURRENT timer is NOT a future countdown.
+    // Logic: If room.startTime is in the past (<= now), it means the previous countdown FINISHED.
+    // So we "bank" that finish time as the new 'previousStartTime'.
+
+    const isExpired = currentStart <= now;
+
+    if (isExpired) {
+        room.previousStartTime = currentStart;
+    }
+
+    // If startTime is provided, use it. Otherwise reset to NOW.
+    room.startTime = startTime || now;
+
+    log(`[ROOM ${code}] Timer reset to ${new Date(room.startTime).toISOString()}`);
+    broadcast(room, "timer-update", { startTime: room.startTime, previousStartTime: room.previousStartTime });
+
+    res.json({ startTime: room.startTime });
 });
 
 // Leave Room

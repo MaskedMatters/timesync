@@ -145,12 +145,123 @@ function setupRoomUI(code, currentMember, initialRoomState) {
     console.log("Connecting SSE:", sseUrl);
     const evtSource = new EventSource(sseUrl);
 
-    let roomCreatedAt = initialRoomState ? initialRoomState.createdAt : null;
+    let roomStartTime = initialRoomState ? initialRoomState.startTime : Date.now();
+    let roomPreviousStartTime = initialRoomState ? initialRoomState.previousStartTime : Date.now();
     const members = new Map();
 
     // Initialize members from initial state if available
     if (initialRoomState && initialRoomState.members) {
         initialRoomState.members.forEach(m => members.set(m.id, m));
+    }
+
+    // -- Controls --
+    const tabNow = document.getElementById("tab-now");
+    const tabSchedule = document.getElementById("tab-schedule");
+    const panelNow = document.getElementById("panel-now");
+    const panelSchedule = document.getElementById("panel-schedule");
+
+    const resetNowBtn = document.getElementById("resetNowBtn");
+    const setStartTimeBtn = document.getElementById("setStartTimeBtn");
+    const startTimeInput = document.getElementById("startTimeInput");
+    const timezoneSelect = document.getElementById("timezoneSelect");
+    const subStopwatchEl = document.getElementById("sub-stopwatch");
+
+    // Tabs Logic
+    function switchTab(mode) {
+        if (mode === "now") {
+            tabNow.classList.add("active");
+            tabSchedule.classList.remove("active");
+            panelNow.classList.add("active");
+            panelSchedule.classList.remove("active");
+        } else {
+            tabNow.classList.remove("active");
+            tabSchedule.classList.add("active");
+            panelNow.classList.remove("active");
+            panelSchedule.classList.add("active");
+
+            // Default to +5 minutes from now
+            if (startTimeInput && !startTimeInput.value) {
+                const now = new Date();
+                const future = new Date(now.getTime() + 5 * 60000);
+                const pad = n => n.toString().padStart(2, '0');
+                const localIso = `${future.getFullYear()}-${pad(future.getMonth() + 1)}-${pad(future.getDate())}T${pad(future.getHours())}:${pad(future.getMinutes())}:${pad(future.getSeconds())}`;
+                startTimeInput.value = localIso;
+            }
+        }
+    }
+
+    if (tabNow) tabNow.addEventListener("click", () => switchTab("now"));
+    if (tabSchedule) tabSchedule.addEventListener("click", () => switchTab("schedule"));
+
+    // Timezone Population
+    if (timezoneSelect) {
+        const timezones = Intl.supportedValuesOf('timeZone');
+        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        timezones.forEach(tz => {
+            const option = document.createElement("option");
+            option.value = tz;
+            option.textContent = tz.replace(/_/g, " ");
+            if (tz === userTz) option.selected = true;
+            timezoneSelect.appendChild(option);
+        });
+    }
+
+    // Handlers
+    if (resetNowBtn) {
+        resetNowBtn.addEventListener("click", () => resetTimer(null));
+    }
+
+    if (setStartTimeBtn && startTimeInput && timezoneSelect) {
+        setStartTimeBtn.addEventListener("click", () => {
+            if (!startTimeInput.value) return alert("Please select a time");
+
+            // value is "YYYY-MM-DDTHH:mm:ss" (local to input, effectively abstract)
+            // We need to interpret this string AS IF it is in the selected timezone.
+
+            const targetISO = startTimeInput.value; // "2026-01-02T12:00:00"
+            const targetTZ = timezoneSelect.value;
+
+            // Start with a guess: Treat input as UTC
+            let guess = new Date(targetISO + "Z").getTime();
+
+            // Refine loop
+            for (let i = 0; i < 5; i++) {
+                const guessDate = new Date(guess);
+                // What time is 'guess' in the target timezone?
+                // We format it to parts to reconstruct the ISO string it 'looks like'
+                const checkString = guessDate.toLocaleString('en-CA', {
+                    timeZone: targetTZ,
+                    hour12: false,
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                }).replace(", ", "T").replace(/\//g, "-");
+                // formatted: "2026-01-02T12:00:00" (hopefully)
+
+                const checkTime = new Date(checkString + "Z").getTime();
+                const targetTime = new Date(targetISO + "Z").getTime();
+
+                const diff = targetTime - checkTime;
+                if (Math.abs(diff) < 1000) break; // Close enough
+
+                guess += diff;
+            }
+
+            resetTimer(guess);
+        });
+    }
+
+    async function resetTimer(timestamp) {
+        try {
+            await fetch(`/rooms/${code}/reset`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ startTime: timestamp })
+            });
+        } catch (e) {
+            console.error(e);
+            alert("Failed to reset timer");
+        }
     }
 
     // -- UI Updaters --
@@ -214,6 +325,7 @@ function setupRoomUI(code, currentMember, initialRoomState) {
 
     evtSource.addEventListener("init", e => {
         const data = JSON.parse(e.data);
+        roomStartTime = data.startTime || data.createdAt;
         roomCreatedAt = data.createdAt;
 
         members.clear();
@@ -221,6 +333,15 @@ function setupRoomUI(code, currentMember, initialRoomState) {
 
         updateMemberList();
         updateTopBar();
+    });
+
+    evtSource.addEventListener("timer-update", e => {
+        const data = JSON.parse(e.data);
+        roomStartTime = data.startTime;
+
+        if (data.previousStartTime !== undefined) {
+            roomPreviousStartTime = data.previousStartTime;
+        }
     });
 
     evtSource.addEventListener("member-joined", e => {
@@ -253,9 +374,36 @@ function setupRoomUI(code, currentMember, initialRoomState) {
     function tick() {
         updateTopBar();
 
-        if (roomCreatedAt && stopwatchEl) {
-            const elapsed = Date.now() - roomCreatedAt;
-            stopwatchEl.textContent = formatTime(elapsed);
+        const now = Date.now();
+
+        if (roomStartTime && stopwatchEl) {
+            let elapsed = now - roomStartTime;
+
+            // Handle future start time (Countdown)
+            if (elapsed < 0) {
+                stopwatchEl.style.color = "#fca5a5"; // Reddish for countdown
+                stopwatchEl.textContent = "T- " + formatTime(Math.abs(elapsed));
+
+                // Show sub-stopwatch (Elapsed since PREVIOUS timer start)
+                if (subStopwatchEl) {
+                    // Fallback to roomStartTime if previous is missing (first run)
+                    const base = roomPreviousStartTime || roomStartTime;
+                    // Calculate elapsed from that base
+                    const totalElapsed = now - base;
+                    // If totalElapsed is negative (e.g. clock drift or weirdness), clamp to 0
+                    subStopwatchEl.textContent = formatTime(Math.max(0, totalElapsed));
+                    subStopwatchEl.style.display = "block";
+                }
+            } else {
+                stopwatchEl.style.color = ""; // Reset color
+                stopwatchEl.textContent = formatTime(elapsed);
+
+                // Hide sub-stopwatch when timer is running normally
+                if (subStopwatchEl) {
+                    subStopwatchEl.textContent = "";
+                    subStopwatchEl.style.display = "none";
+                }
+            }
         }
 
         // Also update member list "time online" counters

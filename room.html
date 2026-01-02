@@ -23,7 +23,10 @@
                 Room Code: <span id="room-code-value"></span>
             </div>
 
-            <div id="stopwatch">00:00:00.000</div>
+            <div class="timer-group">
+                <div id="stopwatch">00:00:00.000</div>
+                <div id="sub-stopwatch"></div>
+            </div>
         </div>
 
         <aside id="side-panel">
@@ -31,6 +34,36 @@
             <ul id="member-list"></ul>
 
             <button id="leaveRoom" class="danger">Leave Room</button>
+
+            <div id="admin-controls">
+                <h3>Timer Controls</h3>
+
+                <div class="admin-tabs">
+                    <button id="tab-now" class="active">Reset Now</button>
+                    <button id="tab-schedule">Schedule</button>
+                </div>
+
+                <!-- Reset Now Panel -->
+                <div id="panel-now" class="admin-panel active">
+                    <p style="margin:0; font-size:0.8rem; color:#94a3b8;">Reset timer to 00:00:00 immediately.</p>
+                    <button id="resetNowBtn" class="primary">Confirm Reset</button>
+                </div>
+
+                <!-- Schedule Panel -->
+                <div id="panel-schedule" class="admin-panel">
+                    <div class="field">
+                        <label>Start Time</label>
+                        <input type="datetime-local" id="startTimeInput" step="1">
+                    </div>
+
+                    <div class="field">
+                        <label>Timezone</label>
+                        <select id="timezoneSelect"></select>
+                    </div>
+
+                    <button id="setStartTimeBtn" class="primary">Set Start Time</button>
+                </div>
+            </div>
         </aside>
     </div>
 

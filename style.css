@@ -6,6 +6,7 @@
 
 body {
     margin: 0;
+    margin: 0;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     background: radial-gradient(circle at top, #020617, #020617 40%, #000000);
     color: #e5e7eb;
@@ -60,7 +61,15 @@ label {
     margin-bottom: 6px;
 }
 
-input {
+input,
+button,
+select,
+textarea {
+    font-family: inherit;
+}
+
+input,
+select {
     padding: 12px;
     border-radius: 8px;
     border: 1px solid #1e293b;
@@ -129,6 +138,10 @@ button:hover {
     flex: 1;
     display: flex;
     flex-direction: column;
+    /* Main takes remaining height (viewport - header implied? no, header is inside) */
+    /* Check HTML structure: body -> .room-layout -> .main */
+    overflow: hidden;
+    position: relative;
 }
 
 /* ---------- Top Bar ---------- */
@@ -147,13 +160,47 @@ button:hover {
 /* ---------- Stopwatch ---------- */
 
 #stopwatch {
-    flex: 1;
+    /* Flex 1 removed so it doesnt fight with group */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 4.5rem;
     font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums;
     letter-spacing: 0.05em;
+}
+
+.timer-group {
+    flex: 1;
+    /* Grow to fill space between top bar and bottom */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Center Vertically */
+    align-items: center;
+    /* Center Horizontally */
+    width: 100%;
+    margin-top: -50px;
+    /* Slight visual offset to account for heavy elements below if any */
+}
+
+#stopwatch {
+    /* Reset all external positioning influence */
+    flex: 0 0 auto;
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+}
+
+#sub-stopwatch {
+    text-align: center;
+    font-size: 2rem;
+    color: inherit;
+    /* White/Inherit */
+    margin-top: 0px;
+    height: 2.5rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: normal;
 }
 
 /* ---------- Side Panel ---------- */
@@ -187,4 +234,87 @@ button:hover {
     border: 1px solid #1e293b;
     font-size: 0.85rem;
     line-height: 1.4;
+}
+
+/* ---------- Admin Controls ---------- */
+
+#admin-controls {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #1e293b;
+}
+
+#admin-controls h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1rem;
+    color: #94a3b8;
+}
+
+.schedule-reset {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.schedule-reset label {
+    font-size: 0.75rem;
+}
+
+#admin-controls button {
+    font-size: 0.85rem;
+    padding: 10px;
+}
+
+/* Tab Toggles */
+.admin-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.admin-tabs button {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 8px;
+}
+
+.admin-tabs button.active {
+    background: #1e293b;
+    color: #fff;
+    border-color: #64748b;
+}
+
+/* Panels */
+.admin-panel {
+    display: none;
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+}
+
+.admin-panel.active {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+select {
+    width: 100%;
+    background: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    outline: none;
+    /* Custom Arrow Positioning */
+    padding-right: 40px;
+    /* Make space for arrow */
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px top 50%;
+    background-size: 12px auto;
 }
