@@ -2,7 +2,7 @@
 
 A real-time, high-precision collaborative timing application. Create or join a shared room to track time together across different timezones.
 
-**Version:** 1.2.1-p
+**Version:** 1.3.3-p
 
 ---
 
@@ -55,8 +55,8 @@ Prebuilt images are published to container registries; you do not need to build 
 GitHub Container Registry (GHCR):
 
 ```bash
-docker pull ghcr.io/<your-org-or-username>/timesync:latest
-docker run -p 3000:3000 ghcr.io/<your-org-or-username>/timesync:latest
+docker pull ghcr.io/maskedmatters/timesync:latest
+docker run -p 3000:3000 ghcr.io/maskedmatters/timesync:latest
 ```
 
 Docker Hub:
@@ -75,5 +75,3 @@ Note: the published image includes metadata labels such as `org.opencontainers.i
 - Real-time events: `/events` (SSE)
 - API endpoints: `/rooms`, `/rooms/:code/join`, `/rooms/:code/reset`, `/rooms/:code/leave`, `/dst-stats`
 - The schedule input (`datetime-local`) is interpreted as the selected timezone when setting a scheduled start.
-
-If you want, I can add a short CONTRIBUTING section, environment variable information, or a GitHub Actions workflow to publish images automatically.
