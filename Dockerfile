@@ -1,6 +1,9 @@
 # Use Node.js 24 LTS (Alpine for smaller image size)
 FROM node:24-alpine
 
+# Image description
+LABEL org.opencontainers.image.description "A real-time, high-precision collaborative timing application for synchronized rooms across timezones."
+
 # Set working directory
 WORKDIR /app
 
