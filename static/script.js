@@ -28,6 +28,53 @@ function formatTimeByLocale(date, locale, options) {
     }
 }
 
+function getMilitaryTimeFromDateInput(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+function getTimeZoneAbbreviation(timeZone) {
+    try {
+        const zoneFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone,
+            timeZoneName: 'short'
+        });
+
+        const parts = zoneFormatter.formatToParts(new Date());
+        let zonePart = parts.find(p => p.type === 'timeZoneName')?.value;
+
+        if (!zonePart) {
+            zonePart = timeZone;
+        }
+
+        if ((timeZone === 'UTC' || timeZone === 'Etc/UTC') && zonePart === 'GMT') {
+            return 'UTC';
+        }
+
+        return zonePart;
+    } catch (e) {
+        console.error('Time zone abbreviation error:', e);
+        return timeZone;
+    }
+}
+
+function formatMajorityTime(date, timeZone) {
+    const zoneCode = getTimeZoneAbbreviation(timeZone);
+    const formattedTime = formatTimeByLocale(date, navigator.language, {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+
+    return `${formattedTime} (${timeZone} - ${zoneCode})`;
+}
+
 /* ---------- ROOM NAVIGATION ---------- */
 
 async function createRoom() {
@@ -164,7 +211,19 @@ function setupRoomUI(code, currentMember, initialRoomState) {
     const setStartTimeBtn = document.getElementById("setStartTimeBtn");
     const startTimeInput = document.getElementById("startTimeInput");
     const timezoneSelect = document.getElementById("timezoneSelect");
+    const militaryNoteEl = document.getElementById("militaryNote");
+    const dstWarningEl = document.getElementById("dstWarning");
     const subStopwatchEl = document.getElementById("sub-stopwatch");
+
+    function updateMilitaryNote() {
+        if (!militaryNoteEl || !startTimeInput) return;
+        const militaryTime = getMilitaryTimeFromDateInput(startTimeInput.value);
+        if (militaryTime) {
+            militaryNoteEl.textContent = `^ equal to [${militaryTime}] in mil. time`;
+        } else {
+            militaryNoteEl.textContent = '^ equal to [00:00:00] in mil. time';
+        }
+    }
 
     // Tabs Logic
     function switchTab(mode) {
@@ -186,12 +245,14 @@ function setupRoomUI(code, currentMember, initialRoomState) {
                 const pad = n => n.toString().padStart(2, '0');
                 const localIso = `${future.getFullYear()}-${pad(future.getMonth() + 1)}-${pad(future.getDate())}T${pad(future.getHours())}:${pad(future.getMinutes())}:${pad(future.getSeconds())}`;
                 startTimeInput.value = localIso;
+                updateMilitaryNote();
             }
         }
     }
 
     if (tabNow) tabNow.addEventListener("click", () => switchTab("now"));
     if (tabSchedule) tabSchedule.addEventListener("click", () => switchTab("schedule"));
+    if (startTimeInput) startTimeInput.addEventListener("input", updateMilitaryNote);
 
     // Timezone Population
     if (timezoneSelect) {
@@ -210,6 +271,26 @@ function setupRoomUI(code, currentMember, initialRoomState) {
     // Handlers
     if (resetNowBtn) {
         resetNowBtn.addEventListener("click", () => resetTimer(null));
+    }
+    updateMilitaryNote();
+
+    // Fetch DST stats from server and populate warning (append UK note if UK currently in DST)
+    if (dstWarningEl) {
+        fetch('/dst-stats').then(r => r.json()).then(data => {
+            if (data && typeof data.count === 'number' && data.hemisphere) {
+                let ukInDst = false;
+                try {
+                    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', timeZoneName: 'short' }).formatToParts(new Date());
+                    const londonZone = parts.find(p => p.type === 'timeZoneName')?.value || '';
+                    if (londonZone && londonZone.toUpperCase().includes('BST')) ukInDst = true;
+                } catch (e) {
+                    // ignore
+                }
+
+                const endingHtml = ukInDst ? `, <strong>including the UK</strong>.` : '.';
+                dstWarningEl.innerHTML = `Currently, <strong>${data.hemisphere} hemisphere</strong> is observing Daylight Saving Time (approx. ${data.count} countries currently affected)${endingHtml}`;
+            }
+        }).catch(err => console.error('Failed to fetch DST stats', err));
     }
 
     if (setStartTimeBtn && startTimeInput && timezoneSelect) {
@@ -279,15 +360,16 @@ function setupRoomUI(code, currentMember, initialRoomState) {
             const memberList = Array.from(members.values());
             const majority = getMajorityTimezone(memberList);
             if (majority) {
-                majorityTimeEl.textContent = `Majority: ${formatTimeByLocale(now, "en-US", { timeZone: majority, hour: "2-digit", minute: "2-digit", second: "2-digit" })} (${majority})`;
+                majorityTimeEl.textContent = `Majority: ${formatMajorityTime(now, majority)}`;
             } else {
                 majorityTimeEl.textContent = "Majority: Calculating...";
             }
         }
 
-        // GMT Time
+        // UTC Time
         if (gmtTimeEl) {
-            gmtTimeEl.textContent = `GMT: ${formatTimeByLocale(now, "en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}`;
+            const utcTime = formatTimeByLocale(now, "en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+            gmtTimeEl.textContent = `UTC: ${utcTime}`;
         }
     }
 
@@ -301,12 +383,20 @@ function setupRoomUI(code, currentMember, initialRoomState) {
             // Calculate time since they joined
             const elapsed = Date.now() - m.joinedAt;
 
-            // Their local time (based on their declared locale/timezone)
+            // Their local time in their locale, with timezone abbreviation.
             let userLocalTime = "Unknown";
             try {
-                // If they provided a timezone, we can show what time it is for THEM.
                 if (m.timezone) {
-                    userLocalTime = new Date().toLocaleTimeString("en-US", { timeZone: m.timezone, hour: '2-digit', minute: '2-digit' });
+                    const locale = m.locale || navigator.language;
+                    const timeFormatter = new Intl.DateTimeFormat(locale, {
+                        timeZone: m.timezone,
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                    const zonePart = getTimeZoneAbbreviation(m.timezone);
+                    userLocalTime = `${timeFormatter.format(new Date())} ${zonePart}`;
                 }
             } catch (e) {
                 console.error("Error formatting member time", e);

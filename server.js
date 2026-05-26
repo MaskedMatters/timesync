@@ -2,6 +2,9 @@ import express from "express";
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
+import moment from 'moment-timezone';
+import ct from 'countries-and-timezones';
+import worldCountries from 'world-countries';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -209,6 +212,74 @@ app.post("/rooms/:code/leave", (req, res) => {
     }
 
     res.status(204).end();
+});
+
+// DST stats - return which hemisphere and approx number of countries currently observing DST
+app.get('/dst-stats', (req, res) => {
+    try {
+        const zones = moment.tz.names();
+        const countries = new Set();
+
+        zones.forEach(zone => {
+            try {
+                const m = moment.tz(zone);
+                if (m.isDST && m.isDST()) {
+                    const tzInfo = ct.getTimezone(zone);
+                    if (tzInfo && tzInfo.countries && tzInfo.countries.length) {
+                        tzInfo.countries.forEach(c => countries.add(c));
+                    } else if (tzInfo && tzInfo.country) {
+                        countries.add(tzInfo.country);
+                    }
+                }
+            } catch (e) {
+                // ignore individual zone errors
+            }
+        });
+
+        // Build a lookup for country ISO2 -> latitude using world-countries dataset
+        const latByIso2 = new Map();
+        worldCountries.forEach(c => {
+            if (c.cca2 && Array.isArray(c.latlng) && typeof c.latlng[0] === 'number') {
+                latByIso2.set(c.cca2.toUpperCase(), c.latlng[0]);
+            }
+        });
+
+        // Determine hemisphere by country latitudes where possible
+        let northCount = 0;
+        let southCount = 0;
+        let unknownCount = 0;
+
+        countries.forEach(cc => {
+            try {
+                const iso2 = cc.toUpperCase();
+                const lat = latByIso2.get(iso2);
+                if (typeof lat === 'number') {
+                    if (lat > 0) northCount++;
+                    else if (lat < 0) southCount++;
+                    else unknownCount++;
+                } else {
+                    unknownCount++;
+                }
+            } catch (e) {
+                unknownCount++;
+            }
+        });
+
+        // Decide hemisphere by majority of known country latitudes; fallback to month if unknown
+        let hemisphere = null;
+        if (northCount + southCount === 0) {
+            const month = new Date().getUTCMonth() + 1; // 1-12
+            hemisphere = (month >= 4 && month <= 9) ? 'Northern' : 'Southern';
+        } else {
+            hemisphere = northCount >= southCount ? 'Northern' : 'Southern';
+        }
+
+        const count = countries.size;
+        res.json({ hemisphere, count, northCount, southCount, unknownCount });
+    } catch (e) {
+        console.error('DST stats error', e);
+        res.status(500).json({ error: 'Failed to compute DST stats' });
+    }
 });
 
 app.listen(PORT, () => {
